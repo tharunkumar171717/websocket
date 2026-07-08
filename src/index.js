@@ -1,12 +1,10 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
 
+import { handleWebSocketMessage } from './services/websocket.service.js';
+
 const port = process.env.PORT || 8000;
 const app = express();
-
-const users = [
-  { id: 1, name: 'tharun', email: 'tharun@email.com' },
-];
 
 app.get('/health', (_request, response) => {
   response.status(200).json({
@@ -24,26 +22,7 @@ const websocketServer = new WebSocketServer({ server, path: '/ws' });
 websocketServer.on('connection', (socket) => {
   console.log('Client connected');
 
-  socket.on('message', (data) => {
-    try {
-      const message = JSON.parse(data.toString());
-
-      if (message.type !== 'GET_USER') {
-        socket.send(JSON.stringify({ success: false, type: 'ERROR' }));
-        return;
-      }
-
-      const user = users.filter((item) => item.name === message.user);
-
-      socket.send(JSON.stringify({
-        success: user.length > 0,
-        type: 'GET_USER_RESPONSE',
-        data: user.length > 0 ? user : 'not found',
-      }));
-    } catch {
-      socket.send(JSON.stringify({ success: false, type: 'ERROR' }));
-    }
-  });
+  socket.on('message', (message) => handleWebSocketMessage(socket, message));
 
   socket.on('close', () => console.log('Client disconnected'));
 });
